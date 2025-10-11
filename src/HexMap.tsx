@@ -1,6 +1,9 @@
 import React from 'react';
 import { HexGrid, Layout, Hexagon, Text, Pattern, Path } from 'react-hexgrid';
 import { TransformWrapper, TransformComponent, useControls, } from "react-zoom-pan-pinch";
+import HexTile from './HexTile';
+import { TerrainType, terrainColors, terrainList } from './terrain';
+
 
 const Controls = () => {
     const { zoomIn, zoomOut, resetTransform } = useControls();
@@ -21,7 +24,7 @@ function generateHexMap(radius: number) {
         for (let r = -radius; r <= radius; r++) {
             let s = Math.abs(q + r);
             if (s <= radius) {
-                const type = terrainList[Math.floor(Math.random() * terrainList.length)] as terrainTypes;
+                const type = terrainList[Math.floor(Math.random() * terrainList.length)];
                 hexes.push({ q, r, s, type });
             }
         }
@@ -29,29 +32,21 @@ function generateHexMap(radius: number) {
     return hexes;
 }
 
-const terrainColors = {
-    empty: "#1b1d29",
-    asteroid: "#d78424ff",
-    planet: "#3069f1",
-    nebula: "#7e3ff2",
-    warp: "#acb3e0ff",
-    research: "#227e2cff",
-    hangar: "#cb2e2eff",
-    defense: "#777777ff"
-};
 
-// More to be added eventually
-type terrainTypes = "empty" | "asteroid" | "nebula" | "warp" | "research" | "hangar" | "defense";
-const terrainList = ["empty", "asteroid", "nebula", "warp", "research", "hangar", "defense"];
 
 type Hex = {
     q: number;
     r: number;
     s: number;
-    type: terrainTypes;
+    type: TerrainType;
 }
 
-const HexMap: React.FC = () => {
+type HexMapProps = {
+    windowWidth: number;
+    windowHeight: number;
+};
+
+const HexMap: React.FC<HexMapProps> = ({ windowWidth, windowHeight }) => {
     const radius = 20;
     const [selected, setSelected] = React.useState<{ q: number; r: number; s: number } | null>(null);
 
@@ -61,57 +56,43 @@ const HexMap: React.FC = () => {
     return (
         <div
             style={{
+                position: "fixed",
+                top: 0,
+                left: 0,
                 width: "100vw",
                 height: "100vh",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
+                overflow: "hidden",
             }}
         >
-            <TransformWrapper
-                initialScale={4}
-                minScale={1}
-                maxScale={5}
-                wheel={{ step: 0.1 }}
-            >
+            <TransformWrapper minScale={0.5} maxScale={5} wheel={{ step: 0.1 }}>
                 <TransformComponent>
-                    <HexGrid viewBox="-200 -200 400 400">
-                        <Layout size={{ x: 2.5, y: 2.5 }} flat={false} spacing={1.05} origin={{ x: 0, y: 0 }}>
-                            {hexes.map((hex, i) => {
-                                const isSelected =
-                                    selected &&
-                                    selected.q === hex.q &&
-                                    selected.r === hex.r &&
-                                    selected.s === hex.s;
-                                const key = `${hex.q},${hex.r}`;
-                                const fill = terrainColors[hex.type]; // safe: hex.type is TerrainType
-                                return (
-                                    <Hexagon
-                                        key={i}
-                                        q={hex.q}
-                                        r={hex.r}
-                                        s={hex.s}
-                                        onClick={() => setSelected((prev) => {
-                                            if (prev && prev.q == hex.q && prev.r == hex.r && prev.s == hex.s) {
-                                                return null;
-                                            }
-                                            return { q: hex.q, r: hex.r, s: hex.s };
-                                        })}
-                                        style={{
-                                            fill,
-                                            border: "0.5px solid",
-                                            stroke: isSelected ? "#facc15" : "#222",
-                                            strokeWidth: 0.1,
-                                            transition: "stroke 0.1s ease",
-                                            cursor: "pointer",
-                                        }}
-                                    >
-                                        <Text style={{ fill: "#fff", fontSize: "0.1em" }}>
-                                            {hex.q},{hex.r}
-                                        </Text>
-                                    </Hexagon>
-                                );
-                            })}
+                    <HexGrid width={windowWidth} height={windowHeight}>
+                        <Layout size={{ x: 1, y: 1 }} flat={false} spacing={1.05} origin={{ x: 0, y: 0 }}>
+                            {hexes.map((hex, i) => (
+                                <HexTile
+                                    key={i}
+                                    q={hex.q}
+                                    r={hex.r}
+                                    s={hex.s}
+                                    type={hex.type}
+                                    isSelected={
+                                        !!selected &&
+                                        selected.q === hex.q &&
+                                        selected.r === hex.r &&
+                                        selected.s === hex.s
+                                    }
+                                    onClick={() =>
+                                        setSelected((prev) =>
+                                            prev &&
+                                                prev.q === hex.q &&
+                                                prev.r === hex.r &&
+                                                prev.s === hex.s
+                                                ? null
+                                                : { q: hex.q, r: hex.r, s: hex.s }
+                                        )
+                                    }
+                                />
+                            ))}
                         </Layout>
                     </HexGrid>
                 </TransformComponent>
@@ -119,5 +100,6 @@ const HexMap: React.FC = () => {
         </div>
     );
 };
+
 
 export default HexMap;
