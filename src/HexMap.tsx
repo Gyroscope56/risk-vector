@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { HexGrid, Layout, Hexagon, Text, Pattern, Path } from 'react-hexgrid';
 import { TransformWrapper, TransformComponent, useControls, } from "react-zoom-pan-pinch";
 import HexTile from './HexTile';
+import OverlayTile from './OverlayTile';
 import { TerrainType, terrainColors, terrainList } from './terrain';
-
+import * as d3 from "d3";
 
 const Controls = () => {
     const { zoomIn, zoomOut, resetTransform } = useControls();
@@ -45,23 +46,24 @@ function getNeighbors(hex: Hex, hexMap: Hex[]): Hex[] {
     }).filter(Boolean) as Hex[];
 }
 
-function generateEnvironment(hexes: Hex[]) {
+function generateEnvironment(hexes: Hex[], radius: number) {
     // Goal is to generate terrain over the whole map. Notably, a lot of it should be continuous
     for (const terrain of terrainList) {
         if (terrain == "asteroid" || terrain == "nebula") {
-            floodFill(terrain, hexes, 10, 0.4);
+            floodFill(terrain, hexes, radius / 2, 0.4);
         }
         else {
-
+            let num = Math.floor(Math.random() * 10);
+            for (let i = 0; i < num; i++) {
+                const temp = hexes[Math.floor(Math.random() * hexes.length)];
+                if (temp.type === "asteroid" || temp.type === "nebula" || temp.type === "empty") {
+                    temp.type = terrain;
+                } else {
+                    i--;
+                }
+            }
         }
     }
-    /*
-    const temp = hexes.find(h => h.q == 0 && h.r == 0);
-    if (temp == undefined) {
-        return;
-    }
-    console.log(getNeighbors(temp, hexes))
-    */
 }
 
 function floodFill(terrain: TerrainType, hexes: Hex[], iterations: number, spreadChance: number) {
@@ -123,7 +125,7 @@ function generateHexMap(radius: number) {
             }
         }
     }
-    generateEnvironment(hexes);
+    generateEnvironment(hexes, radius);
     return hexes;
 }
 
@@ -136,59 +138,98 @@ type HexMapProps = {
 };
 
 const HexMap: React.FC<HexMapProps> = ({ windowWidth, windowHeight }) => {
-    const radius = 20;
+    const radius = 8;
+    const baseScale = 50; // smaller = zoom in more
+    const hexSize = Math.min(windowWidth, windowHeight) / (radius * baseScale);
+
     const [selected, setSelected] = React.useState<{ q: number; r: number; s: number } | null>(null);
 
     // memoize generation so it doesn't regen every render
     const hexes = React.useMemo(() => generateHexMap(radius), [radius]);
 
+
+
+
     return (
         <div
             style={{
-                position: "fixed",
+                position: 'fixed',
                 top: 0,
                 left: 0,
-                width: "100vw",
-                height: "100vh",
-                overflow: "hidden",
+                width: '100vw',
+                height: '100vh',
+                overflow: 'hidden',
             }}
         >
-            <TransformWrapper minScale={0.5} maxScale={5} wheel={{ step: 0.1 }}>
-                <TransformComponent>
-                    <HexGrid width={windowWidth} height={windowHeight}>
-                        <Layout size={{ x: 1, y: 1 }} flat={false} spacing={1.05} origin={{ x: 0, y: 0 }}>
-                            {hexes.map((hex, i) => (
-                                <HexTile
-                                    key={i}
-                                    q={hex.q}
-                                    r={hex.r}
-                                    s={hex.s}
-                                    type={hex.type}
-                                    isSelected={
-                                        !!selected &&
-                                        selected.q === hex.q &&
-                                        selected.r === hex.r &&
-                                        selected.s === hex.s
-                                    }
-                                    onClick={() =>
-                                        setSelected((prev) =>
-                                            prev &&
-                                                prev.q === hex.q &&
-                                                prev.r === hex.r &&
-                                                prev.s === hex.s
-                                                ? null
-                                                : { q: hex.q, r: hex.r, s: hex.s }
-                                        )
-                                    }
-                                />
-                            ))}
-                        </Layout>
-                    </HexGrid>
-                </TransformComponent>
-            </TransformWrapper>
+            <HexGrid width={windowWidth} height={windowHeight}>
+                <Layout size={{ x: hexSize, y: hexSize }} flat={false} spacing={1.05}>
+                    {hexes.map((hex, i) => (
+                        <HexTile
+                            hexSize={hexSize}
+                            key={i}
+                            q={hex.q}
+                            r={hex.r}
+                            s={hex.s}
+                            type={hex.type}
+                            isSelected={
+                                !!selected &&
+                                selected.q === hex.q &&
+                                selected.r === hex.r &&
+                                selected.s === hex.s
+                            }
+                            onClick={() => {
+                                console.log(`i'm clicked! My coordinates are (${hex.q}, ${hex.r})`);
+                                setSelected((prev) =>
+                                    prev &&
+                                        prev.q === hex.q &&
+                                        prev.r === hex.r &&
+                                        prev.s === hex.s
+                                        ? null
+                                        : { q: hex.q, r: hex.r, s: hex.s }
+                                );
+                            }}
+                        />
+                    ))}
+                </Layout>
+            </HexGrid>
+            <HexGrid width={windowWidth} height={windowHeight}>
+                <Layout size={{ x: hexSize, y: hexSize }} flat={false} spacing={1.05}>
+                    {hexes.map((hex, i) => (
+                        <OverlayTile
+                            key={`ov-${hex.q}-${hex.r}`}
+                            q={hex.q}
+                            r={hex.r}
+                            s={hex.s}
+                            isSelected={false}
+                            onClick={() =>
+                                setSelected((prev) =>
+                                    prev &&
+                                        prev.q === hex.q &&
+                                        prev.r === hex.r &&
+                                        prev.s === hex.s
+                                        ? null
+                                        : { q: hex.q, r: hex.r, s: hex.s }
+                                )
+                            }
+                        />
+                    ))}
+                </Layout>
+            </HexGrid>
+            <div
+                style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '900px',   // pick your fixed size
+                    height: '800px',
+                    transform: 'translate(-50%, -50%)',
+                    border: '3px solid #00ff88',
+                    pointerEvents: 'none',  // don’t block clicks on map
+                    boxShadow: '0 0 20px rgba(0,255,136,0.5)',
+                }}
+            />
         </div>
     );
 };
-
 
 export default HexMap;

@@ -3,6 +3,7 @@ import { Hexagon, Text } from "react-hexgrid";
 import { TerrainType, terrainColors, terrainList } from './terrain';
 
 type HexTileProps = {
+    hexSize: number;
     q: number;
     r: number;
     s: number;

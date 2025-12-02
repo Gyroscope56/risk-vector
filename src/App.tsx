@@ -25,9 +25,7 @@ function App() {
   }, []);
   return (
     <div className='App'>
-      <h1>top of map</h1>
       <HexMap windowWidth={dimensions.width} windowHeight={dimensions.height} />
-      <h1>bottom of map</h1>
     </div>
   );
 }
