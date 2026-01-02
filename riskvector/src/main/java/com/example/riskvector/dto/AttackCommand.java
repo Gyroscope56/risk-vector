@@ -1,5 +1,5 @@
 package com.example.riskvector.dto;
 
-public class TurnUpdate {
+public class AttackCommand {
     
 }

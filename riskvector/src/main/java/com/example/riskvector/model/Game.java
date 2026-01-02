@@ -1,8 +1,20 @@
 package com.example.riskvector.model;
 
 import java.time.LocalDateTime;
-import java.util.*;
-import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "games")
@@ -28,7 +40,11 @@ public class Game {
 
     private String stateHash;
 
-    public Game() {}
+    private Long activeShipId;
+    private int activeShipIndex;
+
+    public Game() {
+    }
 
     @PrePersist
     public void onCreate() {
@@ -43,31 +59,37 @@ public class Game {
         this.lastUpdated = LocalDateTime.now();
     }
 
-    public void advanceTurn() { this.turnNumber++; }
+    public void advanceTurn() {
+        this.turnNumber++;
+    }
 
     public void addShip(Ship ship) {
         ship.setGame(this);
         this.ships.add(ship);
     }
 
-  public String getStatus() {
-    return status;
-  }
-
-  public void setStatus(String status) {
-    this.status = status;
-  }
-
-  public LocalDateTime getCreatedAt() {
-    return createdAt;
-  }
-
-  public void setCreatedAt(LocalDateTime createdAt) {
-    this.createdAt = createdAt;
-  }
-
-  public void setTurnNumber(int turnNumber) {
-    this.turnNumber = turnNumber;
-  }
-
+    public boolean isShipActive(Long shipId) {
+        return shipId.equals(activeShipId);
+    }
+    public List<Ship> getShips() {
+        return this.ships;
+    }
+    public String getStatus() {
+        return this.status;
+    }
+    public void setStatus(String s) {
+        this.status = s;
+    }
+    public void setTurnNumber(int i) {
+        this.turnNumber = i;
+    }
+    public void setActiveShipId(Long id) {
+        this.activeShipId = id;
+    }
+    public Long getActiveShipId() {
+        return this.activeShipId;
+    }
+    public int getTurnNumber() {
+        return this.turnNumber;
+    }
 }

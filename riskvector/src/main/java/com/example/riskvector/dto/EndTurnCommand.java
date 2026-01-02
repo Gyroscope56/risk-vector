@@ -1,5 +1,5 @@
 package com.example.riskvector.dto;
 
-public class AttackRequest {
+public class EndTurnCommand {
     
 }
