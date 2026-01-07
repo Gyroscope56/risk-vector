@@ -89,6 +89,12 @@ public class Game {
     public Long getActiveShipId() {
         return this.activeShipId;
     }
+    public void setActiveShipIndex(int index) {
+        this.activeShipIndex = index;
+    }
+    public int getActiveShipIndex() {
+        return this.activeShipIndex;
+    }
     public int getTurnNumber() {
         return this.turnNumber;
     }

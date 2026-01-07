@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import com.example.riskvector.dto.AttackCommand;
+import com.example.riskvector.dto.EndTurnCommand;
 import com.example.riskvector.dto.MoveShipCommand;
 import com.example.riskvector.model.Game;
 import com.example.riskvector.model.Ship;
@@ -34,10 +35,7 @@ public class GameEngine {
             throw new IllegalStateException("Not this ship's turn");
         }
 
-        int distance = hexDistance(
-            ship.getQ(), ship.getR(), ship.getS(),
-            cmd.q(), cmd.r(), cmd.s()
-        );
+        int distance = ((Math.abs(ship.getQ()-cmd.q())) + (Math.abs(ship.getR()-cmd.r())) + (Math.abs(ship.getS()-cmd.s())))/2;
 
         if (distance > ship.getMovement()) {
             throw new IllegalStateException("Move too far");
@@ -57,42 +55,41 @@ public class GameEngine {
             throw new IllegalStateException("Not your turn");
         }
         // Modify with actual attack logic
-        target.setHp(target.getHp() - 1);
+        attacker.shoot(target, null);
     }
 
-    public void endTurn(Game game) {
+    public void endTurn(Game game, EndTurnCommand cmd) {
         if (!game.getStatus().equals("ACTIVE")) {
             throw new IllegalStateException("Game not active");
         }
-
+        if (!cmd.id().equals(game.getActiveShipId())) {
+            throw new IllegalStateException("Ship " + cmd.id() + " is trying to end turn, while it is the turn of Ship " + game.getActiveShipId());
+        }
         List<Ship> ships = aliveShips(game);
-
         if (ships.size() <= 1) {
             game.setStatus("ENDED");
             return;
         }
 
         Long currentId = game.getActiveShipId();
+        int currentIndex = game.getActiveShipIndex();
 
-        int currentIndex = -1;
-        for (int i = 0; i < ships.size(); i++) {
-            if (ships.get(i).getId().equals(currentId)) {
-                currentIndex = i;
+        while (currentIndex < ships.size()) {
+            currentIndex ++;
+            if (!ships.get(currentIndex).getDestroyed()) {
                 break;
             }
         }
-
-        if (currentIndex == -1) {
-            throw new IllegalStateException("Active ship missing");
+        if (currentIndex < ships.size()) {
+            game.setActiveShipIndex(currentIndex);
+            game.setActiveShipId(ships.get(currentIndex).getId());
+        } else {
+            // Next round begins
+            currentIndex = 0;
+            game.advanceTurn();
+            game.setActiveShipIndex(0);
+            game.setActiveShipId(ships.get(currentIndex).getId());
         }
-
-        int nextIndex = (currentIndex + 1) % ships.size();
-
-        if (nextIndex == 0) {
-            game.setTurnNumber(game.getTurnNumber() + 1);
-        }
-
-        game.setActiveShipId(ships.get(nextIndex).getId());
     }
     private List<Ship> aliveShips(Game game) {
         return game.getShips().stream()
